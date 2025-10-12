@@ -42,12 +42,12 @@ However, we can actually implement this ourselves using glorious ZFS and bind mo
 
 First, we can decide on a basic scheme for our ZFS datasets:
 
-```
-rpool/nix       mounted at /nix
-rpool/root      mounted at /
-rpool/home      mounted at /home
-rpool/persist   mounted at /persist
-```
+
+- `rpool/nix` at `/nix`
+- `rpool/root` at `/`
+- `rpool/home` at `/home`
+- `rpool/persist` at `/persist`
+
 
 …and of course, a FAT32 `/boot` as the ESP.
 
@@ -59,7 +59,7 @@ The pulverization will be a simple `zfs rollback` to an empty snapshot.
 
 While creating the datasets, take the empty snapshots so we can roll back to them:
 
-```
+```console
 # zfs snapshot rpool/root@blank
 # zfs snapshot rpool/home@blank
 ```
@@ -72,30 +72,28 @@ Once your box is fully set up, we can decide what we want to persist across sess
 
 From the NixOS [manual](https://nixos.org/manual/nixos/stable/#ch-system-state), these directories are required (apart from `/nix` and `/boot`):
 
-```
-/var/lib/nixos
-/var/lib/systemd
-/etc/zfs/zpool.cache
-/var/log
-/etc/machine-id
-```
+
+- `/var/lib/nixos`
+- `/var/lib/systemd`
+- `/etc/zfs/zpool.cache`
+- `/var/log`
+- `/etc/machine-id`
 
 The `machine-id` can be passed as a kernel parameter, so we can skip that and set:
 
-```
+```nix
 boot.kernelParams = [ "systemd.machine_id=${vars.device.machineId}" ];
 ```
 
 And these are my personal picks:
 
-```
-/var/lib/sbctl
-~/Documents
-~/Downloads
-~/Pictures
-~/.ssh
-~/.config/BraveSoftware/Brave-Browser
-```
+- `/var/lib/sbctl`
+- `~/Documents`
+- `~/Downloads`
+- `~/Pictures`
+- `~/.ssh`
+- `~/.config/BraveSoftware/Brave-Browser`
+
 
 Now we can write a NixOS module for the entire affair.
 
@@ -103,16 +101,19 @@ First, we create `/persist/root` and copy everything required to this directory.
 
 We can write bind mounts like this:
 
-```
+```nix
 fileSystems."/path/to/thing" = {
   device = "/persist/root/path/to/thing";
-  options = [ "bind" ];
+  options = [ "bind" "x-gvfs-hide" ];
 };
 ```
 
+<details>
+<summary>
 Here are all my bind mounts on my personal PC, for example:
+</summary>
 
-```
+```nix
   # Persist files on /
   # Secureboot
   fileSystems."/var/lib/sbctl" = {
@@ -146,42 +147,44 @@ Here are all my bind mounts on my personal PC, for example:
 
   # Persist files on /home
   # Documents directory
-  fileSystems."/home/${vars.user.name}/Documents" = {
-    device = "/persist/root/home/${vars.user.name}/Documents";
+  fileSystems."/home/myUsername/Documents" = {
+    device = "/persist/root/home/myUsername/Documents";
     options = [ "bind" "x-gvfs-hide" ];
   };
 
   # Downloads directory
-  fileSystems."/home/${vars.user.name}/Downloads" = {
-    device = "/persist/root/home/${vars.user.name}/Downloads";
+  fileSystems."/home/myUsername/Downloads" = {
+    device = "/persist/root/home/myUsername/Downloads";
     options = [ "bind" "x-gvfs-hide" ];
   };
 
   # Pictures directory
-  fileSystems."/home/${vars.user.name}/Pictures" = {
-    device = "/persist/root/home/${vars.user.name}/Pictures";
+  fileSystems."/home/myUsername/Pictures" = {
+    device = "/persist/root/home/myUsername/Pictures";
     options = [ "bind" "x-gvfs-hide" ];
   };
 
   # Projects directory
-  fileSystems."/home/${vars.user.name}/Projects" = {
-    device = "/persist/root/home/${vars.user.name}/Projects";
+  fileSystems."/home/myUsername/Projects" = {
+    device = "/persist/root/home/myUsername/Projects";
     options = [ "bind" "x-gvfs-hide" ];
   };
 
   # SSH directory
-  fileSystems."/home/${vars.user.name}/.ssh" = {
-    device = "/persist/root/home/${vars.user.name}/.ssh";
+  fileSystems."/home/myUsername/.ssh" = {
+    device = "/persist/root/home/myUsername/.ssh";
     options = [ "bind" "x-gvfs-hide" ];
   };
 
   # Brave directories
-  fileSystems."/home/${vars.user.name}/.config/BraveSoftware/Brave-Browser" = {
+  fileSystems."/home/myUsername/.config/BraveSoftware/Brave-Browser" = {
     device =
-      "/persist/root/home/${vars.user.name}/.config/BraveSoftware/Brave-Browser";
+      "/persist/root/home/myUsername/.config/BraveSoftware/Brave-Browser";
     options = [ "bind" "x-gvfs-hide" ];
   };
 ```
+
+</details>
 
 The `x-gvfs-hide` option ensures that these bind mounts don't appear in your file manager as separate mounts, which can be annoying.
 
@@ -191,7 +194,7 @@ Now we can write systemd services for the rollback.
 
 For `rpool/root`:
 
-```
+```nix
   # Rollback /
   boot.initrd.systemd.services.rollback-root = {
     description = "Rollback /";
@@ -209,7 +212,7 @@ For `rpool/root`:
 
 For `rpool/home`:
 
-```
+```nix
   # Rollback /home
   boot.initrd.systemd.services.rollback-home = {
     description = "Rollback /home";
@@ -229,12 +232,12 @@ For `rpool/home`:
     description = "Setup /home";
     wantedBy = [ "local-fs.target" ];
     after = [ "rollback-home.service" "home.mount" ];
-    before = [ "home-manager-${vars.user.name}.service" ];
+    before = [ "home-manager-myUsername.service" ];
     path = with pkgs; [ coreutils ];
     serviceConfig.Type = "oneshot";
     script = ''
-      mkdir -p /home/${vars.user.name}/.config
-      chown ${vars.user.name}: -R /home/${vars.user.name}
+      mkdir -p /home/myUsername/.config
+      chown myUsername: -R /home/myUsername
     '';
   };
 ```
@@ -247,7 +250,7 @@ Now we can rebuild our system. Remember that rolling back the datasets is destru
 
 Do a simple test:
 
-```
+```console
 $ touch ~/naughty-file
 $ touch /naughty-file
 ```
@@ -260,7 +263,7 @@ How often do you check your Ansible playbooks? Every time you make some minor im
 
 In our setup, a `zfs diff` will show all changes made:
 
-```
+```console
 # zfs diff rpool/home@blank
 # zfs diff rpool/root@blank
 ```
