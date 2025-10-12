@@ -104,14 +104,11 @@ We can write bind mounts like this:
 ```nix
 fileSystems."/path/to/thing" = {
   device = "/persist/root/path/to/thing";
-  options = [ "bind" "x-gvfs-hide" ];
+  options = [ "bind" ];
 };
 ```
 
-<details>
-<summary>
 Here are all my bind mounts on my personal PC, for example:
-</summary>
 
 ```nix
   # Persist files on /
@@ -183,8 +180,6 @@ Here are all my bind mounts on my personal PC, for example:
     options = [ "bind" "x-gvfs-hide" ];
   };
 ```
-
-</details>
 
 The `x-gvfs-hide` option ensures that these bind mounts don't appear in your file manager as separate mounts, which can be annoying.
 
