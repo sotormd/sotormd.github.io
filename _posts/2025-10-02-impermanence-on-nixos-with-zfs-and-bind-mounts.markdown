@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Impermanence on NixOS with ZFS and Bind Mounts"
+title: "Impermanence on NixOS with ZFS and Bind Mounts, without the Impermanence library"
 date: 2025-10-02 23:51:11 +0530
 categories: nixos zfs impermanence
 ---
