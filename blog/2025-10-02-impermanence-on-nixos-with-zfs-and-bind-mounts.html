@@ -91,7 +91,6 @@ rpool/persist at /persist</code></pre>
       <p>While creating the datasets, take the empty snapshots so we can roll back to them:</p>
 
       <pre><code># zfs snapshot rpool/root@blank
-
 # zfs snapshot rpool/home@blank</code></pre>
 
       <p>Now we can proceed with the normal installation process.</p>
@@ -113,6 +112,8 @@ rpool/persist at /persist</code></pre>
 
       <pre><code>boot.kernelParams = [ "systemd.machine_id=${config.vars.device.machineId}" ];</code></pre>
 
+      <p>Additionally, you may need to persist the user and group databases in <code>/etc</code> unless your users are immutable in NixOS.</p>
+
       <p>And these are my personal picks:</p>
 
       <pre><code>/var/lib/sbctl
@@ -129,8 +130,7 @@ rpool/persist at /persist</code></pre>
       <p>We can write bind mounts like this:</p>
 
       <pre><code>fileSystems."/path/to/thing" = {
-
-device = "/persist/root/path/to/thing"; options = [ "bind" "x-gvfs-hide" ];
+  device = "/persist/root/path/to/thing"; options = [ "bind" "x-gvfs-hide" ];
 };</code></pre>
 
       <p>The <code>x-gvfs-hide</code> option ensures that these bind mounts don't appear in your
@@ -139,23 +139,37 @@ device = "/persist/root/path/to/thing"; options = [ "bind" "x-gvfs-hide" ];
       <p>Instead of repeating several blocks of code, we can create a helper function:</p>
 
       <pre><code>rec {
+  persistMount = source: destination: {
+    ${destination} = {
+      device = source;
+      options = [ "bind" "x-gvfs-hide" ];
+    };
+  };
 
-persistMount = source: destination: { ${destination} = { device = source;
-options = [ "bind" "x-gvfs-hide" ]; }; };
-
-persistDirs = root: dirs: { fileSystems = builtins.foldl' (acc: dir: acc //
-persistMount "${root}${dir}" dir) { } dirs; }; }</code></pre>
+  persistDirs = root: dirs: { 
+    fileSystems = builtins.foldl' (acc: dir: acc // persistMount "${root}${dir}" dir) { } dirs; 
+  }; 
+}</code></pre>
 
       <p>And now, we can add this to our NixOS config:</p>
 
       <pre><code>{ config, lib, ... }:
 
-lib.mkIf config.vars.device.impermanence.enable ( lib.persistDirs
-"/persist/root" [ "/var/lib/sbctl" "/var/lib/nixos" "/var/lib/systemd"
-"/etc/zfs/zpool.cache" "/var/log" "/home/${user}/Documents"
-    "/home/${user}/Downloads" "/home/${user}/Pictures"
-    "/home/${user}/Projects" "/home/${user}/.ssh"
-    "/home/${user}/.config/BraveSoftware/Brave-Browser" ] )</code></pre>
+lib.mkIf config.vars.device.impermanence.enable (
+  lib.persistDirs "/persist/root" [
+    "/var/lib/sbctl" 
+    "/var/lib/nixos"
+    "/var/lib/systemd"
+    "/etc/zfs/zpool.cache"
+    "/var/log"
+    "/home/${user}/Documents"
+    "/home/${user}/Downloads"
+    "/home/${user}/Pictures"
+    "/home/${user}/Projects"
+    "/home/${user}/.ssh"
+    "/home/${user}/.config/BraveSoftware/Brave-Browser"
+  ] 
+)</code></pre>
 
       <h2>Rollback to Blank Snapshots</h2>
 
@@ -164,26 +178,45 @@ lib.mkIf config.vars.device.impermanence.enable ( lib.persistDirs
       <p>For <code>rpool/root</code>:</p>
 
       <pre><code>boot.initrd.systemd.services.rollback-root = {
-
-description = "Rollback /"; wantedBy = [ "initrd.target" ]; after = [
-"zfs-import-rpool.service" ]; before = [ "sysroot.mount" ]; path = with pkgs; [
-zfs ]; unitConfig.DefaultDependencies = "no"; serviceConfig.Type = "oneshot";
-script = '' zfs rollback -r rpool/root@blank ''; };</code></pre>
+  description = "Rollback /";
+  wantedBy = [ "initrd.target" ];
+  after = [ "zfs-import-rpool.service" ];
+  before = [ "sysroot.mount" ];
+  path = with pkgs; [ zfs ];
+  unitConfig.DefaultDependencies = "no";
+  serviceConfig.Type = "oneshot";
+  script = ''
+    zfs rollback -r rpool/root@blank
+  '';
+};</code></pre>
 
       <p>For <code>rpool/home</code>:</p>
 
       <pre><code>boot.initrd.systemd.services.rollback-home = {
+  description = "Rollback /home";
+  wantedBy = [ "initrd.target" ];
+  after = [ "zfs-import-rpool.service" ];
+  before = [ "sysroot.mount" ];
+  path = with pkgs; [ zfs ];
+  unitConfig.DefaultDependencies = "no";
+  serviceConfig.Type = "oneshot";
+  script = ''
+    zfs rollback -r rpool/home@blank
+  '';
+};
 
-description = "Rollback /home"; wantedBy = [ "initrd.target" ]; after = [
-"zfs-import-rpool.service" ]; before = [ "sysroot.mount" ]; path = with pkgs; [
-zfs ]; unitConfig.DefaultDependencies = "no"; serviceConfig.Type = "oneshot";
-script = '' zfs rollback -r rpool/home@blank ''; };
-
-systemd.services.setup-home = { description = "Setup /home"; wantedBy = [
-"local-fs.target" ]; after = [ "rollback-home.service" "home.mount" ]; before =
-[ "home-manager-myUsername.service" ]; path = with pkgs; [ coreutils ];
-serviceConfig.Type = "oneshot"; script = '' mkdir -p /home/myUsername/.config
-chown myUsername: -R /home/myUsername ''; };</code></pre>
+systemd.services.setup-home = {
+  description = "Setup /home";
+  wantedBy = [ "local-fs.target" ];
+  after = [ "rollback-home.service" "home.mount" ];
+  before = [ "home-manager-myUsername.service" ];
+  path = with pkgs; [ coreutils ];
+  serviceConfig.Type = "oneshot";
+  script = ''
+    mkdir -p /home/myUsername/.config
+    chown myUsername: -R /home/myUsername
+  '';
+};</code></pre>
 
       <p>I noticed that Nix doesn't play well when you persist something within
       <code>.config</code> and the directory doesn't exist, so we create it manually.</p>
@@ -194,7 +227,6 @@ chown myUsername: -R /home/myUsername ''; };</code></pre>
       destructive, so ensure everything important is persisted.</p>
 
       <pre><code>$ touch ~/naughty-file
-
 $ touch /naughty-file</code></pre>
 
       <p>Reboot. Boom. The files are gone. New computer smell <strong>forever</strong>.</p>
@@ -205,7 +237,6 @@ $ touch /naughty-file</code></pre>
       <p>Use <code>zfs diff</code> to inspect changes:</p>
 
       <pre><code># zfs diff rpool/home@blank
-
 # zfs diff rpool/root@blank</code></pre>
 
       <h2>Further Reading</h2>
