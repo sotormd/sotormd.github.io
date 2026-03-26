@@ -4,9 +4,17 @@
   <meta charset="UTF-8">
   <title>Impermanence with ZFS and Bind Mounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/nord.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll("pre code").forEach((el) => {
+        hljs.highlightElement(el);
+      });
+    });
+  </script>
 </head>
 <body>
   <div class="container">
@@ -90,7 +98,7 @@ rpool/persist at /persist</code></pre>
 
       <p>While creating the datasets, take the empty snapshots so we can roll back to them:</p>
 
-      <pre><code># zfs snapshot rpool/root@blank
+      <pre><code class="language-bash"># zfs snapshot rpool/root@blank
 # zfs snapshot rpool/home@blank</code></pre>
 
       <p>Now we can proceed with the normal installation process.</p>
@@ -110,7 +118,7 @@ rpool/persist at /persist</code></pre>
 
       <p>The <code>machine-id</code> can be passed as a kernel parameter, so we can skip that and set:</p>
 
-      <pre><code>boot.kernelParams = [ "systemd.machine_id=${config.vars.device.machineId}" ];</code></pre>
+      <pre><code class="language-nix">boot.kernelParams = [ "systemd.machine_id=${config.vars.device.machineId}" ];</code></pre>
 
       <p>Additionally, you may need to persist the user and group databases in <code>/etc</code> unless your users are immutable in NixOS.</p>
 
@@ -129,7 +137,7 @@ rpool/persist at /persist</code></pre>
 
       <p>We can write bind mounts like this:</p>
 
-      <pre><code>fileSystems."/path/to/thing" = {
+      <pre><code class="language-nix">fileSystems."/path/to/thing" = {
   device = "/persist/root/path/to/thing"; options = [ "bind" "x-gvfs-hide" ];
 };</code></pre>
 
@@ -138,7 +146,7 @@ rpool/persist at /persist</code></pre>
 
       <p>Instead of repeating several blocks of code, we can create a helper function:</p>
 
-      <pre><code>rec {
+      <pre><code class="language-nix">rec {
   persistMount = source: destination: {
     ${destination} = {
       device = source;
@@ -147,13 +155,15 @@ rpool/persist at /persist</code></pre>
   };
 
   persistDirs = root: dirs: { 
-    fileSystems = builtins.foldl' (acc: dir: acc // persistMount "${root}${dir}" dir) { } dirs; 
+    fileSystems = builtins.foldl' (
+      acc: dir: acc // persistMount "${root}${dir}" dir
+    ) { } dirs; 
   }; 
 }</code></pre>
 
       <p>And now, we can add this to our NixOS config:</p>
 
-      <pre><code>{ config, lib, ... }:
+      <pre><code class="language-nix">{ config, lib, ... }:
 
 lib.mkIf config.vars.device.impermanence.enable (
   lib.persistDirs "/persist/root" [
@@ -175,7 +185,7 @@ lib.mkIf config.vars.device.impermanence.enable (
 
       <p>Now we can write systemd services for the rollback.</p>
 
-      <p>For <code>rpool/root</code>:</p>
+      <p>For <code class="language-nix">rpool/root</code>:</p>
 
       <pre><code>boot.initrd.systemd.services.rollback-root = {
   description = "Rollback /";
@@ -192,7 +202,7 @@ lib.mkIf config.vars.device.impermanence.enable (
 
       <p>For <code>rpool/home</code>:</p>
 
-      <pre><code>boot.initrd.systemd.services.rollback-home = {
+      <pre><code class="language-nix">boot.initrd.systemd.services.rollback-home = {
   description = "Rollback /home";
   wantedBy = [ "initrd.target" ];
   after = [ "zfs-import-rpool.service" ];
@@ -226,7 +236,7 @@ systemd.services.setup-home = {
       <p>Now we can rebuild our system. Remember that rolling back the datasets is
       destructive, so ensure everything important is persisted.</p>
 
-      <pre><code>$ touch ~/naughty-file
+      <pre><code class="language-bash">$ touch ~/naughty-file
 $ touch /naughty-file</code></pre>
 
       <p>Reboot. Boom. The files are gone. New computer smell <strong>forever</strong>.</p>
@@ -236,7 +246,7 @@ $ touch /naughty-file</code></pre>
 
       <p>Use <code>zfs diff</code> to inspect changes:</p>
 
-      <pre><code># zfs diff rpool/home@blank
+      <pre><code class="language-bash"># zfs diff rpool/home@blank
 # zfs diff rpool/root@blank</code></pre>
 
       <h2>Further Reading</h2>
