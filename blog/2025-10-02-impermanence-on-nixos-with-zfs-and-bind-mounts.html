@@ -185,7 +185,7 @@ lib.mkIf config.vars.device.impermanence.enable (
 
       <p>Now we can write systemd services for the rollback.</p>
 
-      <p>For <code class="language-nix">rpool/root</code>:</p>
+      <p>For <code>rpool/root</code>:</p>
 
       <pre><code class="language-nix">boot.initrd.systemd.services.rollback-root = {
   description = "Rollback /";
