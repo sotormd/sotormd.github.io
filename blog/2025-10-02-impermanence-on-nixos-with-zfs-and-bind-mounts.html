@@ -80,10 +80,10 @@
 
       <p>First, we can decide on a basic scheme for our ZFS datasets:</p>
 
-      <pre><code>rpool/nix     at /nix
-rpool/root    at /
-rpool/home    at /home
-rpool/persist at /persist</code></pre>
+      <pre><code class="language-bash">rpool/nix      # at /nix
+rpool/root     # at /
+rpool/home     # at /home
+rpool/persist  # at /persist</code></pre>
 
       <p>…and of course, a FAT32 <code>/boot</code> as the ESP.</p>
 
@@ -110,7 +110,7 @@ rpool/persist at /persist</code></pre>
       <p>From the <a href="https://nixos.org/manual/nixos/stable/#ch-system-state">NixOS manual</a>,
       these directories are required (apart from <code>/nix</code> and <code>/boot</code>):</p>
 
-      <pre><code>/var/lib/nixos
+      <pre><code class="language-bash">/var/lib/nixos
 /var/lib/systemd
 /etc/zfs/zpool.cache
 /var/log
@@ -124,7 +124,7 @@ rpool/persist at /persist</code></pre>
 
       <p>And these are my personal picks:</p>
 
-      <pre><code>/var/lib/sbctl
+      <pre><code class="language-bash">/var/lib/sbctl
 ~/Documents
 ~/Downloads
 ~/Pictures
@@ -187,7 +187,7 @@ lib.mkIf config.vars.device.impermanence.enable (
 
       <p>For <code class="language-nix">rpool/root</code>:</p>
 
-      <pre><code>boot.initrd.systemd.services.rollback-root = {
+      <pre><code class="language-nix">boot.initrd.systemd.services.rollback-root = {
   description = "Rollback /";
   wantedBy = [ "initrd.target" ];
   after = [ "zfs-import-rpool.service" ];
@@ -246,8 +246,8 @@ $ touch /naughty-file</code></pre>
 
       <p>Use <code>zfs diff</code> to inspect changes:</p>
 
-      <pre><code class="language-bash"># zfs diff rpool/home@blank
-# zfs diff rpool/root@blank</code></pre>
+      <pre><code class="language-bash">$ sudo zfs diff rpool/home@blank
+$ sudo zfs diff rpool/root@blank</code></pre>
 
       <h2>Further Reading</h2>
 
