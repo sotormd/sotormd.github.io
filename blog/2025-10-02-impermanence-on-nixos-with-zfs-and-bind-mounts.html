@@ -98,8 +98,8 @@ rpool/persist  # at /persist</code></pre>
 
       <p>While creating the datasets, take the empty snapshots so we can roll back to them:</p>
 
-      <pre><code class="language-bash"># zfs snapshot rpool/root@blank
-# zfs snapshot rpool/home@blank</code></pre>
+      <pre><code class="language-bash">$ sudo zfs snapshot rpool/root@blank
+$ sudo zfs snapshot rpool/home@blank</code></pre>
 
       <p>Now we can proceed with the normal installation process.</p>
 
