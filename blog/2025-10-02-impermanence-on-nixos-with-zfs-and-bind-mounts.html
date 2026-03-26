@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Impermanence with ZFS and Bind Mounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+
+    <nav class="nav">
+      <a href="/index.html">home</a>
+      <a href="/blog/index.html">blog</a>
+    </nav>
+
+    <article>
+      <h1>Impermanence with ZFS and Bind Mounts</h1>
+      <div class="post-meta">
+        2025-10-02 • nixos, zfs, impermanence
+      </div>
+
+      <h3>New Computer Smell</h3>
+
+      <p>I love it when my boxes are new. The new computer smell is comparable only to
+      the soothing petrichor after a calming shower.</p>
+
+      <p>This fleeting affection lasts for about two days. After that, the stench of
+      accumulated system state shrouds any remaining freshness.</p>
+
+      <p>An ideal system would have no state. It would be exactly the same today as it
+      was yesterday, and it will be the same tomorrow.</p>
+
+      <p>This, however, is impossible. Unless your box is some kind of embedded device.
+      If your box is your main PC or home server, there are at least five things you'd
+      like to persist across reboots.</p>
+
+      <p>So, if we could somehow keep these "important" things and nuke everything else,
+      we would be in a constant state of new computer smell.</p>
+
+      <p>Remember, if you are not in a constant state of new computer petrichor, you are
+      in a constant state of old computer stench.</p>
+
+      <p>Okay, all this sounds nice on paper. But implementing something like this is
+      very hard on any traditional Linux distribution. Take Debian, for example.
+      Nuking the root partition would obviously lead to an unusable system.</p>
+
+      <p>So, what are the files we need to persist to have a working system?</p>
+
+      <ul>
+        <li>Most of <code>/bin</code></li>
+        <li>Most of <code>/usr/bin</code></li>
+        <li>Most of <code>/usr/share</code></li>
+        <li>Most of <code>/etc</code></li>
+      </ul>
+
+      <p>I could go on, but you see my point. We are left with very little leeway.</p>
+
+      <p>NixOS, on the other hand, requires only <code>/boot</code> and <code>/nix</code> to boot. Everything
+      else is symlinked from <code>/nix</code> during boot time.</p>
+
+      <p>Which is perfect for achieving what we want.</p>
+
+      <p>What seemed herculean on Debian is quite trivial here. In fact, there exists a
+      <a href="https://github.com/nix-community/impermanence">nix-community project</a> to
+      address this issue specifically.</p>
+
+      <p>However, we can actually implement this ourselves using glorious ZFS and bind mounts.</p>
+
+      <h3>ZFS Datasets</h3>
+
+      <p>First, we can decide on a basic scheme for our ZFS datasets:</p>
+
+      <ul>
+        <li><code>rpool/nix     at /nix</code></li>
+        <li><code>rpool/root    at /</code></li>
+        <li><code>rpool/home    at /home</code></li>
+        <li><code>rpool/persist at /persist</code></li>
+      </ul>
+
+      <p>…and of course, a FAT32 <code>/boot</code> as the ESP.</p>
+
+      <p>The plan is simple: every boot, <code>rpool/root</code> and <code>rpool/home</code> are pulverized.
+      Everything in <code>/boot</code>, <code>rpool/nix</code>, and <code>rpool/persist</code> will survive the
+      cataclysm.</p>
+
+      <p>This allows us to keep files that require persistence on <code>rpool/persist</code> and
+      bind mount them.</p>
+
+      <p>The pulverization will be a simple <code>zfs rollback</code> to an empty snapshot.</p>
+
+      <p>While creating the datasets, take the empty snapshots so we can roll back to them:</p>
+
+      <pre><code># zfs snapshot rpool/root@blank
+
+# zfs snapshot rpool/home@blank</code></pre>
+
+      <p>Now we can proceed with the normal installation process.</p>
+
+      <p>Once your box is fully set up, we can decide what we want to persist across sessions.</p>
+
+      <h3>Opt-in Persistence</h3>
+
+      <p>From the <a href="https://nixos.org/manual/nixos/stable/#ch-system-state">NixOS manual</a>,
+      these directories are required (apart from <code>/nix</code> and <code>/boot</code>):</p>
+
+      <ul>
+        <li><code>/var/lib/nixos</code></li>
+        <li><code>/var/lib/systemd</code></li>
+        <li><code>/etc/zfs/zpool.cache</code></li>
+        <li><code>/var/log</code></li>
+        <li><code>/etc/machine-id</code></li>
+      </ul>
+
+      <p>The <code>machine-id</code> can be passed as a kernel parameter, so we can skip that and set:</p>
+
+      <pre><code>boot.kernelParams = [ "systemd.machine_id=${config.vars.device.machineId}" ];</code></pre>
+
+      <p>And these are my personal picks:</p>
+
+      <ul>
+        <li><code>/var/lib/sbctl</code></li>
+        <li><code>~/Documents</code></li>
+        <li><code>~/Downloads</code></li>
+        <li><code>~/Pictures</code></li>
+        <li><code>~/.ssh</code></li>
+        <li><code>~/.config/BraveSoftware/Brave-Browser</code></li>
+      </ul>
+
+      <p>Now we can write a NixOS module for the entire affair.</p>
+
+      <p>First, we create <code>/persist/root</code> and copy everything required to this directory.</p>
+
+      <p>We can write bind mounts like this:</p>
+
+      <pre><code>fileSystems."/path/to/thing" = {
+
+device = "/persist/root/path/to/thing"; options = [ "bind" "x-gvfs-hide" ];
+};</code></pre>
+
+      <p>The <code>x-gvfs-hide</code> option ensures that these bind mounts don't appear in your
+      file manager as separate mounts.</p>
+
+      <p>Instead of repeating several blocks of code, we can create a helper function:</p>
+
+      <pre><code>rec {
+
+persistMount = source: destination: { ${destination} = { device = source;
+options = [ "bind" "x-gvfs-hide" ]; }; };
+
+persistDirs = root: dirs: { fileSystems = builtins.foldl' (acc: dir: acc //
+persistMount "${root}${dir}" dir) { } dirs; }; }</code></pre>
+
+      <p>And now, we can add this to our NixOS config:</p>
+
+      <pre><code>{ config, lib, ... }:
+
+lib.mkIf config.vars.device.impermanence.enable ( lib.persistDirs
+"/persist/root" [ "/var/lib/sbctl" "/var/lib/nixos" "/var/lib/systemd"
+"/etc/zfs/zpool.cache" "/var/log" "/home/${user}/Documents"
+    "/home/${user}/Downloads" "/home/${user}/Pictures"
+    "/home/${user}/Projects" "/home/${user}/.ssh"
+    "/home/${user}/.config/BraveSoftware/Brave-Browser" ] )</code></pre>
+
+      <h3>Rollback to Blank Snapshots</h3>
+
+      <p>Now we can write systemd services for the rollback.</p>
+
+      <p>For <code>rpool/root</code>:</p>
+
+      <pre><code>boot.initrd.systemd.services.rollback-root = {
+
+description = "Rollback /"; wantedBy = [ "initrd.target" ]; after = [
+"zfs-import-rpool.service" ]; before = [ "sysroot.mount" ]; path = with pkgs; [
+zfs ]; unitConfig.DefaultDependencies = "no"; serviceConfig.Type = "oneshot";
+script = '' zfs rollback -r rpool/root@blank ''; };</code></pre>
+
+      <p>For <code>rpool/home</code>:</p>
+
+      <pre><code>boot.initrd.systemd.services.rollback-home = {
+
+description = "Rollback /home"; wantedBy = [ "initrd.target" ]; after = [
+"zfs-import-rpool.service" ]; before = [ "sysroot.mount" ]; path = with pkgs; [
+zfs ]; unitConfig.DefaultDependencies = "no"; serviceConfig.Type = "oneshot";
+script = '' zfs rollback -r rpool/home@blank ''; };
+
+systemd.services.setup-home = { description = "Setup /home"; wantedBy = [
+"local-fs.target" ]; after = [ "rollback-home.service" "home.mount" ]; before =
+[ "home-manager-myUsername.service" ]; path = with pkgs; [ coreutils ];
+serviceConfig.Type = "oneshot"; script = '' mkdir -p /home/myUsername/.config
+chown myUsername: -R /home/myUsername ''; };</code></pre>
+
+      <p>I noticed that Nix doesn't play well when you persist something within
+      <code>.config</code> and the directory doesn't exist, so we create it manually.</p>
+
+      <h3>Testing</h3>
+
+      <p>Now we can rebuild our system. Remember that rolling back the datasets is
+      destructive, so ensure everything important is persisted.</p>
+
+      <pre><code>$ touch ~/naughty-file
+
+$ touch /naughty-file</code></pre>
+
+      <p>Reboot. Boom. The files are gone. New computer smell <strong>forever</strong>.</p>
+
+      <p>The idea of ephemeral systems is useful in many contexts. It forces you to
+      track changes and maintain clean, declarative configs.</p>
+
+      <p>Use <code>zfs diff</code> to inspect changes:</p>
+
+      <pre><code># zfs diff rpool/home@blank
+
+# zfs diff rpool/root@blank</code></pre>
+
+      <h3>Further Reading</h3>
+
+      <ul>
+        <li><a href="https://grahamc.com/blog/erase-your-darlings/">Erase your darlings - Graham C</a></li>
+        <li><a href="https://guekka.github.io/nixos-server-1/">NixOS as a server, part 1: Impermanence - Guekka</a></li>
+        <li><a href="https://mich-murphy.com/nixos-impermanence/">Configuring NixOS for Impermanence - Mich Murphy</a></li>
+      </ul>
+
+      <h3>Fin</h3>
+
+    </article>
+
+</div>
+</body>
+</html>

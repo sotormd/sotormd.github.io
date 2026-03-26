@@ -1,0 +1,210 @@
+/* =========================
+   Nord Theme + Base Styles
+   ========================= */
+
+:root {
+  --nord0: #2e3440;
+  --nord1: #3b4252;
+  --nord2: #434c5e;
+  --nord3: #4c566a;
+  --nord4: #d8dee9;
+  --nord5: #e5e9f0;
+  --nord6: #eceff4;
+  --nord7: #8fbcbb;
+  --nord8: #88c0d0;
+  --nord9: #81a1c1;
+  --nord10: #5e81ac;
+  --nord11: #bf616a;
+  --nord12: #d08770;
+  --nord13: #ebcb8b;
+  --nord14: #a3be8c;
+  --nord15: #b48ead;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "JetBrains Mono", monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--nord0);
+  color: var(--nord4);
+}
+
+/* =========================
+   Layout
+   ========================= */
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* =========================
+   Typography
+   ========================= */
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--nord6);
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+
+p {
+  line-height: 1.7;
+  margin: 1rem 0;
+}
+
+small {
+  color: var(--nord3);
+}
+
+/* =========================
+   Links
+   ========================= */
+
+a {
+  color: var(--nord8);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--nord7);
+}
+
+/* =========================
+   Lists
+   ========================= */
+
+ul, ol {
+  margin: 1rem 0 1rem 1.5rem;
+}
+
+li {
+  margin: 0.4rem 0;
+}
+
+/* =========================
+   Code
+   ========================= */
+
+code {
+  background: var(--nord1);
+  color: var(--nord8);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+pre {
+  background: var(--nord1);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: var(--nord5);
+}
+
+/* =========================
+   Blockquotes
+   ========================= */
+
+blockquote {
+  border-left: 3px solid var(--nord9);
+  margin: 1.5rem 0;
+  padding: 0.5rem 1rem;
+  color: var(--nord5);
+  background: var(--nord1);
+}
+
+/* =========================
+   Tables
+   ========================= */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid var(--nord3);
+  text-align: left;
+}
+
+th {
+  color: var(--nord8);
+}
+
+/* =========================
+   Horizontal Rule
+   ========================= */
+
+hr {
+  border: none;
+  border-top: 1px solid var(--nord3);
+  margin: 2rem 0;
+}
+
+/* =========================
+   Buttons / Interactive
+   ========================= */
+
+button {
+  background: var(--nord1);
+  color: var(--nord4);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button:hover {
+  background: var(--nord2);
+}
+
+/* =========================
+   Blog-specific helpers
+   ========================= */
+
+.post-meta {
+  color: var(--nord3);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.nav {
+  margin-bottom: 2rem;
+}
+
+.nav a {
+  margin-right: 16px;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 600px) {
+  .container {
+    padding: 32px 16px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+}
