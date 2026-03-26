@@ -13,7 +13,6 @@
 
     <nav class="nav">
       <a href="/index.html">home</a>
-      <a href="/blog/index.html">blog</a>
     </nav>
 
     <article>
@@ -73,12 +72,12 @@
 
       <p>First, we can decide on a basic scheme for our ZFS datasets:</p>
 
-      <ul>
-        <li><code>rpool/nix     at /nix</code></li>
-        <li><code>rpool/root    at /</code></li>
-        <li><code>rpool/home    at /home</code></li>
-        <li><code>rpool/persist at /persist</code></li>
-      </ul>
+      <pre><code>
+        rpool/nix     at /nix
+        rpool/root    at /
+        rpool/home    at /home
+        rpool/persist at /persist
+      </code></pre>
 
       <p>…and of course, a FAT32 <code>/boot</code> as the ESP.</p>
 
@@ -106,13 +105,13 @@
       <p>From the <a href="https://nixos.org/manual/nixos/stable/#ch-system-state">NixOS manual</a>,
       these directories are required (apart from <code>/nix</code> and <code>/boot</code>):</p>
 
-      <ul>
-        <li><code>/var/lib/nixos</code></li>
-        <li><code>/var/lib/systemd</code></li>
-        <li><code>/etc/zfs/zpool.cache</code></li>
-        <li><code>/var/log</code></li>
-        <li><code>/etc/machine-id</code></li>
-      </ul>
+      <pre><code>
+        /var/lib/nixos
+        /var/lib/systemd
+        /etc/zfs/zpool.cache
+        /var/log
+        /etc/machine-id
+      </code></pre>
 
       <p>The <code>machine-id</code> can be passed as a kernel parameter, so we can skip that and set:</p>
 
@@ -120,14 +119,14 @@
 
       <p>And these are my personal picks:</p>
 
-      <ul>
-        <li><code>/var/lib/sbctl</code></li>
-        <li><code>~/Documents</code></li>
-        <li><code>~/Downloads</code></li>
-        <li><code>~/Pictures</code></li>
-        <li><code>~/.ssh</code></li>
-        <li><code>~/.config/BraveSoftware/Brave-Browser</code></li>
-      </ul>
+      <pre><code>
+        /var/lib/sbctl
+        ~/Documents
+        ~/Downloads
+        ~/Pictures
+        ~/.ssh
+        ~/.config/BraveSoftware/Brave-Browser
+      </code></pre>
 
       <p>Now we can write a NixOS module for the entire affair.</p>
 

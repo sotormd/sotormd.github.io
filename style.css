@@ -115,6 +115,7 @@ pre code {
   background: none;
   padding: 0;
   color: var(--nord5);
+  white-space: pre;
 }
 
 /* =========================
