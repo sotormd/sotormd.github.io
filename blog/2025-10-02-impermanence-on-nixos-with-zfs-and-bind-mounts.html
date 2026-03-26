@@ -213,18 +213,18 @@ lib.mkIf config.vars.device.impermanence.enable (
   script = ''
     zfs rollback -r rpool/home@blank
   '';
-};
+};</code></pre>
 
-systemd.services.setup-home = {
+      <pre><code class="language-nix">systemd.services.setup-home = {
   description = "Setup /home";
   wantedBy = [ "local-fs.target" ];
   after = [ "rollback-home.service" "home.mount" ];
-  before = [ "home-manager-myUsername.service" ];
+  before = [ "home-manager-${user}.service" ];
   path = with pkgs; [ coreutils ];
   serviceConfig.Type = "oneshot";
   script = ''
-    mkdir -p /home/myUsername/.config
-    chown myUsername: -R /home/myUsername
+    mkdir -p /home/${user}/.config
+    chown ${user}: -R /home/${user}
   '';
 };</code></pre>
 
