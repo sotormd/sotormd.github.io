@@ -38,7 +38,7 @@ html, body {
    ========================= */
 
 .container {
-  max-width: 900px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -109,6 +109,7 @@ pre {
   padding: 16px;
   border-radius: 8px;
   overflow-x: auto;
+  white-space: pre;
 }
 
 pre code {
