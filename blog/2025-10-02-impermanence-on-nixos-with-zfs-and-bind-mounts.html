@@ -21,7 +21,7 @@
         2025-10-02 • nixos, zfs, impermanence
       </div>
 
-      <h3>New Computer Smell</h3>
+      <h2>New Computer Smell</h2>
 
       <p>I love it when my boxes are new. The new computer smell is comparable only to
       the soothing petrichor after a calming shower.</p>
@@ -68,16 +68,14 @@
 
       <p>However, we can actually implement this ourselves using glorious ZFS and bind mounts.</p>
 
-      <h3>ZFS Datasets</h3>
+      <h2>ZFS Datasets</h2>
 
       <p>First, we can decide on a basic scheme for our ZFS datasets:</p>
 
-      <pre><code>
-        rpool/nix     at /nix
-        rpool/root    at /
-        rpool/home    at /home
-        rpool/persist at /persist
-      </code></pre>
+      <pre><code>rpool/nix     at /nix
+rpool/root    at /
+rpool/home    at /home
+rpool/persist at /persist</code></pre>
 
       <p>…and of course, a FAT32 <code>/boot</code> as the ESP.</p>
 
@@ -100,18 +98,16 @@
 
       <p>Once your box is fully set up, we can decide what we want to persist across sessions.</p>
 
-      <h3>Opt-in Persistence</h3>
+      <h2>Opt-in Persistence</h2>
 
       <p>From the <a href="https://nixos.org/manual/nixos/stable/#ch-system-state">NixOS manual</a>,
       these directories are required (apart from <code>/nix</code> and <code>/boot</code>):</p>
 
-      <pre><code>
-        /var/lib/nixos
-        /var/lib/systemd
-        /etc/zfs/zpool.cache
-        /var/log
-        /etc/machine-id
-      </code></pre>
+      <pre><code>/var/lib/nixos
+/var/lib/systemd
+/etc/zfs/zpool.cache
+/var/log
+/etc/machine-id</code></pre>
 
       <p>The <code>machine-id</code> can be passed as a kernel parameter, so we can skip that and set:</p>
 
@@ -119,14 +115,12 @@
 
       <p>And these are my personal picks:</p>
 
-      <pre><code>
-        /var/lib/sbctl
-        ~/Documents
-        ~/Downloads
-        ~/Pictures
-        ~/.ssh
-        ~/.config/BraveSoftware/Brave-Browser
-      </code></pre>
+      <pre><code>/var/lib/sbctl
+~/Documents
+~/Downloads
+~/Pictures
+~/.ssh
+~/.config/BraveSoftware/Brave-Browser</code></pre>
 
       <p>Now we can write a NixOS module for the entire affair.</p>
 
@@ -163,7 +157,7 @@ lib.mkIf config.vars.device.impermanence.enable ( lib.persistDirs
     "/home/${user}/Projects" "/home/${user}/.ssh"
     "/home/${user}/.config/BraveSoftware/Brave-Browser" ] )</code></pre>
 
-      <h3>Rollback to Blank Snapshots</h3>
+      <h2>Rollback to Blank Snapshots</h2>
 
       <p>Now we can write systemd services for the rollback.</p>
 
@@ -194,7 +188,7 @@ chown myUsername: -R /home/myUsername ''; };</code></pre>
       <p>I noticed that Nix doesn't play well when you persist something within
       <code>.config</code> and the directory doesn't exist, so we create it manually.</p>
 
-      <h3>Testing</h3>
+      <h2>Testing</h2>
 
       <p>Now we can rebuild our system. Remember that rolling back the datasets is
       destructive, so ensure everything important is persisted.</p>
@@ -214,7 +208,7 @@ $ touch /naughty-file</code></pre>
 
 # zfs diff rpool/root@blank</code></pre>
 
-      <h3>Further Reading</h3>
+      <h2>Further Reading</h2>
 
       <ul>
         <li><a href="https://grahamc.com/blog/erase-your-darlings/">Erase your darlings - Graham C</a></li>
@@ -222,7 +216,7 @@ $ touch /naughty-file</code></pre>
         <li><a href="https://mich-murphy.com/nixos-impermanence/">Configuring NixOS for Impermanence - Mich Murphy</a></li>
       </ul>
 
-      <h3>Fin</h3>
+      <h1>Fin</h1>
 
     </article>
 
