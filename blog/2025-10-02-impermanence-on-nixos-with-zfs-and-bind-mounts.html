@@ -129,8 +129,7 @@ $ sudo zfs snapshot rpool/home@blank</code></pre>
 ~/Documents
 ~/Downloads
 ~/Pictures
-~/.ssh
-~/.config/BraveSoftware/Brave-Browser</code></pre>
+~/.ssh</code></pre>
 
       <p>Now we can write a NixOS module for the entire affair.</p>
 
@@ -166,21 +165,22 @@ $ sudo zfs snapshot rpool/home@blank</code></pre>
 
       <pre><code class="language-nix">{ config, lib, ... }:
 
-lib.mkIf config.vars.device.impermanence.enable (
-  lib.persistDirs "/persist/root" [
-    "/var/lib/sbctl" 
-    "/var/lib/nixos"
-    "/var/lib/systemd"
-    "/etc/zfs/zpool.cache"
-    "/var/log"
-    "/home/${user}/Documents"
-    "/home/${user}/Downloads"
-    "/home/${user}/Pictures"
-    "/home/${user}/Projects"
-    "/home/${user}/.ssh"
-    "/home/${user}/.config/BraveSoftware/Brave-Browser"
-  ] 
-)</code></pre>
+let
+  user = "sotorm";
+  home = "/home/${user}";
+in
+lib.persistDirs "/persist/root" [
+  "/var/lib/sbctl" 
+  "/var/lib/nixos"
+  "/var/lib/systemd"
+  "/etc/zfs/zpool.cache"
+  "/var/log"
+  "${home}/Documents"
+  "${home}/Downloads"
+  "${home}/Pictures"
+  "${home}/Projects"
+  "${home}/.ssh"
+]</code></pre>
 
       <h2>Rollback to Blank Snapshots</h2>
 
@@ -216,22 +216,6 @@ lib.mkIf config.vars.device.impermanence.enable (
   '';
 };</code></pre>
 
-      <pre><code class="language-nix">systemd.services.setup-home = {
-  description = "Setup /home";
-  wantedBy = [ "local-fs.target" ];
-  after = [ "rollback-home.service" "home.mount" ];
-  before = [ "home-manager-${user}.service" ];
-  path = with pkgs; [ coreutils ];
-  serviceConfig.Type = "oneshot";
-  script = ''
-    mkdir -p /home/${user}/.config
-    chown ${user}: -R /home/${user}
-  '';
-};</code></pre>
-
-      <p>I noticed that Nix doesn't play well when you persist something within
-      <code>.config</code> and the directory doesn't exist, so we create it manually.</p>
-
       <h2>Testing</h2>
 
       <p>Now we can rebuild our system. Remember that rolling back the datasets is
@@ -257,6 +241,9 @@ $ sudo zfs diff rpool/root@blank</code></pre>
         <li><a href="https://guekka.github.io/nixos-server-1/">NixOS as a server, part 1: Impermanence - Guekka</a></li>
         <li><a href="https://mich-murphy.com/nixos-impermanence/">Configuring NixOS for Impermanence - Mich Murphy</a></li>
       </ul>
+
+      <p>Documentation for my current (up-to-date) implementation of Impermanence can be
+      found <a href="https://github.com/sotormd/nixos/blob/master/doc/filesystems.md">here</a>.</p>
 
       <h1>Fin</h1>
 
